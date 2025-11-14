@@ -11,10 +11,13 @@ class Family(BaseModel):
     # Relationships
     users = relationship("User", back_populates="family", cascade="all, delete")
 
+
 class User(BaseModel):
     __tablename__ = "users"
 
-    family_id = Column(Integer, ForeignKey("families.id",ondelete="CASCADE"), nullable=False)
+    family_id = Column(
+        Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False
+    )
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False, index=True)
     password = Column(String, nullable=False)
@@ -22,8 +25,9 @@ class User(BaseModel):
     # Relationships
     family = relationship("Family", back_populates="users")
     roles = relationship(
-        "UserRole",back_populates="user",cascade="all, delete",passive_deletes=True
+        "UserRole", back_populates="user", cascade="all, delete", passive_deletes=True
     )
+
 
 class Role(BaseModel):
     __tablename__ = "roles"
@@ -33,14 +37,17 @@ class Role(BaseModel):
     # Relationships
     user_roles = relationship("UserRole", back_populates="role")
 
+
 class UserRole(BaseModel):
     __tablename__ = "user_roles"
 
-    user_id = Column(Integer, ForeignKey("users.id",ondelete="CASCADE"), nullable=False)
-    role_id = Column(Integer, ForeignKey("roles.id",ondelete="CASCADE"),nullable=False)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    role_id = Column(
+        Integer, ForeignKey("roles.id", ondelete="CASCADE"), nullable=False
+    )
 
     # Relationships
     user = relationship("User", back_populates="roles")
     role = relationship("Role", back_populates="user_roles")
-    
-

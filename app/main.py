@@ -1,9 +1,7 @@
-
 from fastapi import FastAPI
-# import app.model.users as users
-from app.db.database import engine , SessionLocal
-from app.db.database import Base
-from app.routes import users,admin,transaction
+from app.db.database import engine, Base
+from app.routes import users
+import uvicorn
 
 Base.metadata.create_all(bind=engine)
 
@@ -16,5 +14,6 @@ app.include_router(users.router)
 def home():
     return {"message": "Welcome to PocketBuddy API with Roles"}
 
+
 if __name__ == "__main__":
-    main()
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
