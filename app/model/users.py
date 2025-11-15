@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 from .base import BaseModel
 
 
@@ -16,7 +17,7 @@ class User(BaseModel):
     __tablename__ = "users"
 
     family_id = Column(
-        Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=False
+            UUID(as_uuid=True), ForeignKey("families.id", ondelete="CASCADE"), nullable=False
     )
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False, index=True)
@@ -42,10 +43,10 @@ class UserRole(BaseModel):
     __tablename__ = "user_roles"
 
     user_id = Column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     role_id = Column(
-        Integer, ForeignKey("roles.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("roles.id", ondelete="CASCADE"), nullable=False
     )
 
     # Relationships
