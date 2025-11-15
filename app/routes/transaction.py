@@ -5,5 +5,5 @@ from app.db.database import get_db
 from app.db.seeding import seed_roles
 from app.constants import ADMIN
 
-router = APIRouter(prefix="/api/transaction",tags= ["Users"])
+router = APIRouter(prefix="/api/transaction",tags= ["Transaction"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
