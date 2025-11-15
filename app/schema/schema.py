@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-
+from uuid import UUID
 
 class Rolebase(BaseModel):
     name: str
@@ -33,7 +33,7 @@ class MemberCreate(BaseModel):
 
 
 class MemberResponse(BaseModel):
-    id: str
+    id: UUID
     name: str
     email: EmailStr
 
@@ -49,6 +49,7 @@ class MemberUpdate(BaseModel):
 
 
 class TransactionCreate(BaseModel):
+    user_id: UUID
     type: str
     amount: float
     description: str | None = None
@@ -61,7 +62,8 @@ class TransactionUpdate(BaseModel):
 
 
 class TransactionResponse(BaseModel):
-    id: int
+    id: UUID
+    user_id:UUID
     type: str
     amount: float
     description: str | None

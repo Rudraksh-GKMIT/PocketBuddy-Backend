@@ -7,6 +7,7 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.model.users import User
+from uuid import UUID
 
 oauth2_scheme = HTTPBearer()
 
@@ -20,7 +21,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def get_password_hash(password):
     return pwd_context.hash(password)
-
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -44,13 +44,13 @@ def get_current_user(
         jwt_token = token.credentials
         payload = jwt.decode(jwt_token, SECRET_KEY, algorithms=[ALGORITHM])
 
-        # Read user_id as INT
+        # Read user_id as STRING (UUID)
         user_id = payload.get("user_id")
         if user_id is None:
             raise credentials_exception
 
-        # Convert string → int (safe)
-        user_id = int(user_id)
+        # Validate UUID format
+        user_id = UUID(user_id)
 
     except (JWTError, ValueError):
         raise credentials_exception
