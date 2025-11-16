@@ -9,7 +9,7 @@ from uuid import UUID
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
-@router.get("/my")
+@router.get("/members/family")
 def get_my_member(db: Session = Depends(get_db), current=Depends(get_current_user)):
     user, roles = current
 
@@ -22,3 +22,33 @@ def get_my_member(db: Session = Depends(get_db), current=Depends(get_current_use
         .all()
     )
     return result
+
+@router.put("/members/{member_id}")
+def edit_member(
+    member_id: int,
+    request: MemberCreate,
+    db: Session = Depends(get_db),
+    current=Depends(get_current_user),
+):
+    user, roles = current  # UNPACK TUPLE
+
+    # Check admin access
+    if "admin" not in roles:
+        raise HTTPException(status_code=403, detail="Only admin can edit members")
+
+    # Find member
+    member = db.query(User).filter(User.id == member_id).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    # Update details
+    member.name = request.name
+    member.email = request.email
+    member.password = get_password_hash(request.password)
+
+    db.commit()
+    db.refresh(member)
+
+    return {"message": f"Member ID {member_id} updated successfully"}
+
+
