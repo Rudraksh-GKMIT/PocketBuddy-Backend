@@ -6,10 +6,13 @@ from app.schema.schema import MemberCreate, MemberUpdate
 from app.utils.auth import get_current_user, get_password_hash
 from app.model.users import UserRole, Role
 from uuid import UUID
+from app.constants import MEMBER
+
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
+# To see the members of your family
 @router.get("/members/family")
 def get_my_member(db: Session = Depends(get_db), current=Depends(get_current_user)):
     user, roles = current
@@ -25,6 +28,7 @@ def get_my_member(db: Session = Depends(get_db), current=Depends(get_current_use
     return result
 
 
+# To add member in your family
 @router.post("/members")
 def add_member(
     request: MemberCreate,
@@ -56,15 +60,16 @@ def add_member(
     db.flush()
 
     # Assign member role
-    member_role = db.query(Role).filter(Role.name == "member").first()
+    member_role = db.query(Role).filter(Role.name == MEMBER).first()
     user_role = UserRole(user_id=new_user.id, role_id=member_role.id)
     db.add(user_role)
     db.commit()
     db.refresh(new_user)
 
-    return {"message": "Member added successfully", "member_id": new_user.id}
+    return {"message": "Member added successfully"}
 
 
+# Edit existing Member data
 @router.put("/members/{member_id}")
 def edit_member(
     member_id: UUID,
@@ -72,7 +77,7 @@ def edit_member(
     db: Session = Depends(get_db),
     current=Depends(get_current_user),
 ):
-    user, roles = current  # UNPACK TUPLE
+    user, roles = current
 
     # Check admin access
     if "admin" not in roles:
@@ -86,12 +91,43 @@ def edit_member(
     # Update details
     if request.name is not None:
         member.name = request.name
+
     if request.email is not None:
         member.email = request.email
+
+    existing_user = db.query(User).filter(User.email == request.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Member already exists")
+
     if request.password is not None:
         member.password = get_password_hash(request.password)
 
     db.commit()
     db.refresh(member)
 
-    return {"message": f"Member ID {member_id} updated successfully"}
+    return {"message": "Member updated successfully"}
+
+
+@router.delete("/member/{member_id}")
+def delete_member(
+    member_id: UUID, db: Session = Depends(get_db), current=Depends(get_current_user)
+):
+    user, roles = current 
+
+    # Check for role
+    if "admin" not in roles:
+        raise HTTPException(status_code=403, detail="Only admin can delete members")
+
+    # Finding the member
+    member = db.query(User).filter(User.id == member_id).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    # Admin can't delete themselves
+    if user.id == member_id:
+        raise HTTPException(400, "Admin cannot delete themselves")
+
+    db.delete(member)
+    db.commit()
+
+    return {"message": "Member deleted successfully"}
