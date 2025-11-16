@@ -8,3 +8,17 @@ from app.model.users import UserRole, Role
 from uuid import UUID
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+@router.get("/my")
+def get_my_member(db: Session = Depends(get_db), current=Depends(get_current_user)):
+    user, roles = current
+
+    if "admin" not in roles:
+        raise HTTPException(status_code=403, detail="Only admin can view members")
+
+    result = (
+        db.query(User)
+        .filter(User.family_id == user.family_id, User.id != user.id)
+        .all()
+    )
+    return result
