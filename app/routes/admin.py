@@ -108,7 +108,7 @@ def edit_member(
     return {"message": "Member updated successfully"}
 
 
-@router.delete("/member/{member_id}")
+@router.delete("/members/{member_id}")
 def delete_member(
     member_id: UUID, db: Session = Depends(get_db), current=Depends(get_current_user)
 ):
