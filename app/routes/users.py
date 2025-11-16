@@ -1,0 +1,12 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from passlib.context import CryptContext
+import app.model.users as users
+import app.schema.schema as schema
+import app.utils.auth as auth
+from app.db.database import get_db
+from app.db.seeding import seed_roles
+from app.constants import ADMIN
+
+router = APIRouter(prefix="/api/users", tags=["Users"])
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
