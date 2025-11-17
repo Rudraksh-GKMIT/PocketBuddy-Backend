@@ -74,7 +74,7 @@ def update_transaction(
     return tx
 
 
-@router.delete("/transaction/{transaction_id}")
+@router.delete("/{transaction_id}")
 def delete_transaction(
     transaction_id: UUID,
     db: Session = Depends(get_db),
@@ -96,7 +96,7 @@ def delete_transaction(
     return {"message": "Transaction deleted successfully"}
 
 
-@router.get("/transactions/family", response_model=list[TransactionResponse])
+@router.get("/family", response_model=list[TransactionResponse])
 def get_family_transaction(
     db: Session = Depends(get_db),
     current=Depends(get_current_user),
