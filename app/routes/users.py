@@ -80,7 +80,7 @@ def login_user(request: schema.UserLogin, db: Session = Depends(get_db)):
 
     token_data = {
         "user_id": str(user.id),
-        "username" :str(user.name),
+        "username": str(user.name),
         "family_id": str(user.family_id),
         "role": user_role.name if user_role else "unknown",
     }

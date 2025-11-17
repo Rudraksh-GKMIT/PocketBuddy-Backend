@@ -45,3 +45,31 @@ def add_transaction(
     db.refresh(new_transaction)
 
     return new_transaction
+
+
+@router.put("/update/{transaction_id}", response_model=TransactionResponse)
+def update_transaction(
+    transaction_id: UUID,
+    request: TransactionUpdate,
+    db: Session = Depends(get_db),
+    current=Depends(get_current_user),
+):
+    user, roles = current
+    tx = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction Not Found")
+    if tx.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not allowed to access this record")
+    if request.type is not None:
+        tx.type = request.type
+    if request.amount is not None:
+        if request.amount <= 0:
+            raise HTTPException(status_code=400, detail="Amount must be positive")
+        tx.amount = request.amount
+    if request.description is not None:
+        tx.description = request.description
+    db.commit()
+    db.refresh(tx)
+
+    return tx
+
