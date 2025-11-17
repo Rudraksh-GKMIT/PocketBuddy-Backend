@@ -18,7 +18,7 @@ def get_my_transaction(
     user, roles = current
     total = (
         db.query(func.sum(Transaction.amount))
-        .filter(Transaction.user_id == user.id, User.deleted_at.is_(None))
+        .filter(Transaction.user_id == user.id, Transaction.deleted_at.is_(None))
         .scalar()
     )
     return {"user_id": user.id, "total_expense": total}
@@ -37,9 +37,24 @@ def get_family_transaction(
     )
     total = (
         db.query(func.sum(Transaction.amount))
-        .filter(Transaction.user_id.in_(family_user))
+        .filter(Transaction.user_id.in_(family_user), Transaction.deleted_at.is_(None))
         .scalar()
     )
 
     return {"family_id": user.family_id, "total_family_expense": total}
 
+
+@router.get("/type")
+def summary_by_type(db: Session = Depends(get_db), current=Depends(get_current_user)):
+    user, roles = current
+
+    results = (
+        db.query(Transaction.type, func.sum(Transaction.amount))
+        .filter(Transaction.user_id == user.id,Transaction.deleted_at.is_(None))
+        .group_by(Transaction.type)
+        .all()
+    )
+
+    type_summary = [{"type": t, "total": total} for t, total in results]
+
+    return {"user_id": user.id, "type_summary": type_summary}
