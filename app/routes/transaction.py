@@ -96,7 +96,7 @@ def delete_transaction(
     return {"message": "Transaction deleted successfully"}
 
 
-@router.get("/family", response_model=list[TransactionResponse])
+@router.get("/transactions/family", response_model=list[TransactionResponse])
 def get_family_transaction(
     db: Session = Depends(get_db),
     current=Depends(get_current_user),
@@ -115,3 +115,41 @@ def get_family_transaction(
 
     return transactions
 
+
+@router.get("/type/{tx_type}", response_model=list[TransactionResponse])
+def get_transaction_by_type(
+    tx_type: str, db: Session = Depends(get_db), current=Depends(get_current_user)
+):
+    user, roles = current
+    type_data = (
+        db.query(Transaction)
+        .filter(
+            Transaction.user_id == user.id,
+            User.deleted_at.is_(None),
+            User.deleted_at.is_(None),
+            Transaction.type == tx_type,
+        )
+        .all()
+    )
+
+    return type_data
+
+
+@router.get("/family/type/{tx_type}", response_model=list[TransactionResponse])
+def get_transaction_by_family_type(
+    tx_type: str, db: Session = Depends(get_db), current=Depends(get_current_user)
+):
+    user, roles = current
+    if "admin" not in roles:
+        raise HTTPException(status_code=403, detail="Only Admin can access it.")
+    family_users = db.query(User.id).filter(
+        User.family_id == user.family_id, User.deleted_at.is_(None)
+    )
+
+    type_data = (
+        db.query(Transaction)
+        .filter(Transaction.user_id.in_(family_users), Transaction.type == tx_type)
+        .all()
+    )
+
+    return type_data
