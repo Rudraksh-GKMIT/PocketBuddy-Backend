@@ -17,7 +17,9 @@ class User(BaseModel):
     __tablename__ = "users"
 
     family_id = Column(
-            UUID(as_uuid=True), ForeignKey("families.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("families.id", ondelete="CASCADE"),
+        nullable=False,
     )
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False, index=True)
