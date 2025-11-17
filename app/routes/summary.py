@@ -58,3 +58,57 @@ def summary_by_type(db: Session = Depends(get_db), current=Depends(get_current_u
     type_summary = [{"type": t, "total": total} for t, total in results]
 
     return {"user_id": user.id, "type_summary": type_summary}
+
+@router.get("/monthly")
+def monthly_transaction(
+    mode: str = "all",
+    db: Session = Depends(get_db),
+    current=Depends(get_current_user)
+):
+    user, roles = current
+
+    year_expr = extract("year", Transaction.created_at)
+    month_expr = extract("month", Transaction.created_at)
+
+    if mode == "current":
+        now = datetime.utcnow()
+        total = (
+            db.query(func.sum(Transaction.amount))
+            .filter(
+                Transaction.user_id == user.id,
+                Transaction.deleted_at.is_(None),
+                year_expr == now.year,
+                month_expr == now.month,
+            )
+            .scalar()
+        )
+        return {
+            "user_id": user.id,
+            "year": now.year,
+            "month": now.month,
+            "total": total or 0,
+        }
+
+    # mode = "all"
+    result = (
+        db.query(
+            year_expr.label("year"),
+            month_expr.label("month"),
+            func.sum(Transaction.amount).label("total"),
+        )
+        .filter(Transaction.user_id == user.id, Transaction.deleted_at.is_(None))
+        .group_by(year_expr, month_expr)
+        .order_by(year_expr, month_expr)
+        .all()
+    )
+
+    monthly_data = [
+        {
+            "year": int(row.year),
+            "month": calendar.month_name[int(row.month)],
+            "total": row.total,
+        }
+        for row in result
+    ]
+
+    return {"user_id": user.id, "monthly_summary": monthly_data}
