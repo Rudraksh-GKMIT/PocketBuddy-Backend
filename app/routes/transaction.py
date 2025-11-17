@@ -12,7 +12,7 @@ from datetime import datetime
 router = APIRouter(prefix="/api/transaction", tags=["Transaction"])
 
 
-@router.get("/my", response_model=list[TransactionResponse])
+@router.get("/me", response_model=list[TransactionResponse])
 def get_my_transactions(
     db: Session = Depends(get_db), current=Depends(get_current_user)
 ):
@@ -25,7 +25,7 @@ def get_my_transactions(
     return transaction
 
 
-@router.post("/transactions", response_model=TransactionCreate)
+@router.post("/", response_model=TransactionCreate)
 def add_transaction(
     request: TransactionCreate,
     db: Session = Depends(get_db),
@@ -47,7 +47,7 @@ def add_transaction(
     return new_transaction
 
 
-@router.put("/transaction/{transaction_id}", response_model=TransactionResponse)
+@router.put("/{transaction_id}", response_model=TransactionResponse)
 def update_transaction(
     transaction_id: UUID,
     request: TransactionUpdate,
