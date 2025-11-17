@@ -31,6 +31,8 @@ def add_transaction(
     db: Session = Depends(get_db),
     current=Depends(get_current_user),
 ):
+    if request.amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be positive")
     user, roles = current
     new_transaction = Transaction(
         user_id=user.id,
@@ -38,8 +40,7 @@ def add_transaction(
         amount=request.amount,
         description=request.description,
     )
-    if request.amount <= 0:
-        raise HTTPException(status_code=400, detail="Amount must be positive")
+
     db.add(new_transaction)
     db.commit()
     db.refresh(new_transaction)
@@ -54,20 +55,25 @@ def update_transaction(
     db: Session = Depends(get_db),
     current=Depends(get_current_user),
 ):
+
+    if request.amount is not None and request.amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be positive")
+
     user, roles = current
     tx = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction Not Found")
+
     if tx.user_id != user.id:
-        raise HTTPException(status_code=403, detail="Not allowed to access this record")
-    if request.type is not None:
-        tx.type = request.type
-    if request.amount is not None:
-        if request.amount <= 0:
-            raise HTTPException(status_code=400, detail="Amount must be positive")
-        tx.amount = request.amount
-    if request.description is not None:
-        tx.description = request.description
+        raise HTTPException(
+            status_code=403, detail="Not allowed to update this transaction"
+        )
+
+    update_data = request.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(tx, key, value)
+
     db.commit()
     db.refresh(tx)
 
@@ -110,46 +116,54 @@ def get_family_transaction(
     )
 
     transactions = (
-        db.query(Transaction).filter(Transaction.user_id.in_(family_users)).all()
+        db.query(Transaction)
+        .filter(Transaction.user_id.in_(family_users), Transaction.deleted_at.is_(None))
+        .all()
     )
 
     return transactions
 
 
 @router.get("/type/{tx_type}", response_model=list[TransactionResponse])
-def get_transaction_by_type(
-    tx_type: str, db: Session = Depends(get_db), current=Depends(get_current_user)
+def get_transactions_by_type(
+    tx_type: str,
+    scope: str = "mine",
+    db: Session = Depends(get_db),
+    current=Depends(get_current_user),
 ):
     user, roles = current
-    type_data = (
-        db.query(Transaction)
-        .filter(
-            Transaction.user_id == user.id,
-            User.deleted_at.is_(None),
-            User.deleted_at.is_(None),
-            Transaction.type == tx_type,
+
+    if scope == "mine":
+        return (
+            db.query(Transaction)
+            .filter(
+                Transaction.user_id == user.id,
+                Transaction.type == tx_type,
+                Transaction.deleted_at.is_(None),
+            )
+            .all()
         )
-        .all()
+
+    if scope == "family":
+        if "admin" not in roles:
+            raise HTTPException(
+                status_code=403, detail="Only admin can access family data."
+            )
+
+        family_users = db.query(User.id).filter(
+            User.family_id == user.family_id, User.deleted_at.is_(None)
+        )
+
+        return (
+            db.query(Transaction)
+            .filter(
+                Transaction.user_id.in_(family_users),
+                Transaction.type == tx_type,
+                Transaction.deleted_at.is_(None),
+            )
+            .all()
+        )
+
+    raise HTTPException(
+        status_code=400, detail="Invalid scope. Use 'mine' or 'family'."
     )
-
-    return type_data
-
-
-@router.get("/family/type/{tx_type}", response_model=list[TransactionResponse])
-def get_transaction_by_family_type(
-    tx_type: str, db: Session = Depends(get_db), current=Depends(get_current_user)
-):
-    user, roles = current
-    if "admin" not in roles:
-        raise HTTPException(status_code=403, detail="Only Admin can access it.")
-    family_users = db.query(User.id).filter(
-        User.family_id == user.family_id, User.deleted_at.is_(None)
-    )
-
-    type_data = (
-        db.query(Transaction)
-        .filter(Transaction.user_id.in_(family_users), Transaction.type == tx_type)
-        .all()
-    )
-
-    return type_data
