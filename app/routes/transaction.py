@@ -25,7 +25,7 @@ def get_my_transactions(
     return transaction
 
 
-@router.post("/add", response_model=TransactionCreate)
+@router.post("/transactions", response_model=TransactionCreate)
 def add_transaction(
     request: TransactionCreate,
     db: Session = Depends(get_db),
@@ -47,7 +47,7 @@ def add_transaction(
     return new_transaction
 
 
-@router.put("/update/{transaction_id}", response_model=TransactionResponse)
+@router.put("/transaction/{transaction_id}", response_model=TransactionResponse)
 def update_transaction(
     transaction_id: UUID,
     request: TransactionUpdate,
@@ -72,4 +72,46 @@ def update_transaction(
     db.refresh(tx)
 
     return tx
+
+
+@router.delete("/transaction/{transaction_id}")
+def delete_transaction(
+    transaction_id: UUID,
+    db: Session = Depends(get_db),
+    current=Depends(get_current_user),
+):
+    user, roles = current
+    transaction_id = UUID(str(transaction_id))
+    tx = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+    if tx.deleted_at:
+        raise HTTPException(status_code=400, detail="Transaction is already deleted")
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction Not Found")
+    if tx.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not allowed to access this record")
+    tx.deleted_at = datetime.utcnow()
+
+    db.commit()
+
+    return {"message": "Transaction deleted successfully"}
+
+
+@router.get("/family", response_model=list[TransactionResponse])
+def get_family_transaction(
+    db: Session = Depends(get_db),
+    current=Depends(get_current_user),
+):
+    user, roles = current
+    if "admin" not in roles:
+        raise HTTPException(status_code=403, detail="Only Admin can asscess it.")
+
+    family_users = db.query(User.id).filter(
+        User.family_id == user.family_id, User.deleted_at.is_(None)
+    )
+
+    transactions = (
+        db.query(Transaction).filter(Transaction.user_id.in_(family_users)).all()
+    )
+
+    return transactions
 
