@@ -48,7 +48,7 @@ def register_admin(request: schema.UserCreate, db: Session = Depends(get_db)):
         admin_role = db.query(users.Role).filter(users.Role.name == ADMIN).first()
         user_role = users.UserRole(user_id=new_user.id, role_id=admin_role.id)
         db.add(user_role)
-        
+
         db.commit()
         db.refresh(new_family)
         db.refresh(new_user)
@@ -57,14 +57,19 @@ def register_admin(request: schema.UserCreate, db: Session = Depends(get_db)):
             "message": f"Admin {new_user.name} registered successfully",
             "family_id": new_family.id,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
+
 
 @router.post("/login", response_model=schema.Token)
 def login_user(request: schema.UserLogin, db: Session = Depends(get_db)):
     user = db.query(users.User).filter(users.User.email == request.email).first()
     if not user or not verify_password(request.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    if user.deleted_at:
+        raise HTTPException(status_code=403, detail="User is deleted")
 
     user_role = (
         db.query(users.Role.name)
@@ -75,6 +80,7 @@ def login_user(request: schema.UserLogin, db: Session = Depends(get_db)):
 
     token_data = {
         "user_id": str(user.id),
+        "username": str(user.name),
         "family_id": str(user.family_id),
         "role": user_role.name if user_role else "unknown",
     }
