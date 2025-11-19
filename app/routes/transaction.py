@@ -9,14 +9,14 @@ from app.utils.auth import get_current_user
 from uuid import UUID
 from datetime import datetime
 
-router = APIRouter(prefix="/api/transaction", tags=["Transaction"])
+router = APIRouter(prefix="/api/transactions", tags=["Transaction"])
 
 
-@router.get("/me", response_model=list[TransactionResponse])
+@router.get("/", response_model=list[TransactionResponse])
 def get_my_transactions(
     db: Session = Depends(get_db), current=Depends(get_current_user)
 ):
-    user, roles = current
+    user , _ = current
     transaction = (
         db.query(Transaction)
         .filter(Transaction.user_id == user.id, Transaction.deleted_at.is_(None))
@@ -36,7 +36,7 @@ def add_transaction(
     user, roles = current
     new_transaction = Transaction(
         user_id=user.id,
-        type=request.type,
+        type=request.type.lower(),
         amount=request.amount,
         description=request.description,
     )
@@ -113,7 +113,7 @@ def get_family_transaction(
 
     family_users = db.query(User.id).filter(
         User.family_id == user.family_id, User.deleted_at.is_(None)
-    )
+    ).subquery()
 
     transactions = (
         db.query(Transaction)
@@ -132,7 +132,7 @@ def get_transactions_by_type(
     current=Depends(get_current_user),
 ):
     user, roles = current
-
+    tx_type = tx_type.lower()
     if scope == "mine":
         return (
             db.query(Transaction)
@@ -152,7 +152,7 @@ def get_transactions_by_type(
 
         family_users = db.query(User.id).filter(
             User.family_id == user.family_id, User.deleted_at.is_(None)
-        )
+        ).subquery()
 
         return (
             db.query(Transaction)

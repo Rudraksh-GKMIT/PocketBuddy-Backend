@@ -61,11 +61,11 @@ def get_current_user(
         raise credentials_exception
 
     # Load the user
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
     if not user:
         raise credentials_exception
 
     # Load roles from junction table
-    roles = [ur.role.name for ur in user.roles]  # ["admin", "member"]
+    roles = [ur.role.name for ur in user.roles]
 
     return user, roles

@@ -7,7 +7,8 @@ from app.utils.auth import get_current_user, get_password_hash
 from app.model.users import UserRole, Role
 from uuid import UUID
 from app.constants import MEMBER
-
+from datetime import datetime
+from app.model.transactions import Transaction
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -22,7 +23,11 @@ def get_my_member(db: Session = Depends(get_db), current=Depends(get_current_use
 
     result = (
         db.query(User)
-        .filter(User.family_id == user.family_id, User.id != user.id)
+        .filter(
+            User.family_id == user.family_id,
+            User.id != user.id,
+            User.deleted_at.is_(None),
+        )
         .all()
     )
     return result
@@ -35,7 +40,7 @@ def add_member(
     db: Session = Depends(get_db),
     current=Depends(get_current_user),
 ):
-    user, roles = current  # unpack properly
+    user, roles = current
 
     # Check admin permission
     if "admin" not in roles:
@@ -45,9 +50,9 @@ def add_member(
     family_id = user.family_id
 
     # Check if email already exists
-    existing_user = db.query(User).filter(User.email == request.email).first()
+    existing_user = db.query(User).filter(User.email == request.email ).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="Member already exists")
+        raise HTTPException(status_code=400, detail="Email already exists can't you it")
 
     # Create new user
     new_user = User(
@@ -95,7 +100,7 @@ def edit_member(
     if request.email is not None:
         member.email = request.email
 
-    existing_user = db.query(User).filter(User.email == request.email).first()
+    existing_user = db.query(User).filter(User.email == request.email,User.id != member_id).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Member already exists")
 
@@ -112,7 +117,7 @@ def edit_member(
 def delete_member(
     member_id: UUID, db: Session = Depends(get_db), current=Depends(get_current_user)
 ):
-    user, roles = current 
+    user, roles = current
 
     # Check for role
     if "admin" not in roles:
@@ -127,7 +132,18 @@ def delete_member(
     if user.id == member_id:
         raise HTTPException(400, "Admin cannot delete themselves")
 
-    db.delete(member)
+    if member.deleted_at:
+        raise HTTPException(status_code=400, detail="Member is already deleted")
+
+    db.query(Transaction).filter(
+        Transaction.user_id == member_id,
+        Transaction.deleted_at.is_(None)
+    ).update(
+        {Transaction.deleted_at: datetime.utcnow()},
+        synchronize_session=False,
+    )
+    member.deleted_at = datetime.utcnow()
+
     db.commit()
 
     return {"message": "Member deleted successfully"}
