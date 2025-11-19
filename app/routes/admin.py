@@ -52,7 +52,7 @@ def add_member(
     # Check if email already exists
     existing_user = db.query(User).filter(User.email == request.email ).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="Email already exists can't you it")
+        raise HTTPException(status_code=400, detail="Email already exists")
 
     # Create new user
     new_user = User(
