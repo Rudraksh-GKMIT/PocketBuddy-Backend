@@ -1,5 +1,8 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr , field_validator
 from uuid import UUID
+from datetime import datetime
+
+VALID_TYPES = {"food", "travel", "shopping", "entertainment", "bills", "other"}
 
 
 class Rolebase(BaseModel):
@@ -49,16 +52,31 @@ class MemberUpdate(BaseModel):
 
 
 class TransactionCreate(BaseModel):
-    # user_id: UUID
     type: str
     amount: float
-    description: str | None = None
+    description: str 
+    
+    @field_validator("type")
+    def normalize_and_validate_type(cls, v):
+        v = v.lower()
+        if v not in VALID_TYPES:
+            raise ValueError(f"Invalid transaction type '{v}'. Must be one of: {', '.join(VALID_TYPES)}")
+        return v
 
 
 class TransactionUpdate(BaseModel):
     type: str | None = None
     amount: float | None = None
     description: str | None = None
+    
+    @field_validator("type")
+    def normalize_and_validate_type(cls, v):
+        if v is None:
+            return v
+        v = v.lower()
+        if v not in VALID_TYPES:
+            raise ValueError(f"Invalid transaction type '{v}'. Must be one of: {', '.join(VALID_TYPES)}")
+        return v
 
 
 class TransactionResponse(BaseModel):
@@ -66,7 +84,7 @@ class TransactionResponse(BaseModel):
     user_id: UUID
     type: str
     amount: float
-    description: str | None
-
+    description: str  | None = None
+    created_at : datetime |  None = None
     class Config:
         from_attributes = True

@@ -18,6 +18,7 @@ def get_all_users(db: Session = Depends(get_db)):
     return db.query(users.User).all()
 
 
+
 @router.post("/register")
 def register_admin(request: schema.UserCreate, db: Session = Depends(get_db)):
     try:
@@ -36,7 +37,7 @@ def register_admin(request: schema.UserCreate, db: Session = Depends(get_db)):
         hashed_pw = pwd_context.hash(request.password)
         new_user = users.User(
             name=request.name,
-            email=request.email,
+            email=request.email.lower(),
             password=hashed_pw,
             family_id=new_family.id,
         )
@@ -65,7 +66,7 @@ def register_admin(request: schema.UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=schema.Token)
 def login_user(request: schema.UserLogin, db: Session = Depends(get_db)):
-    user = db.query(users.User).filter(users.User.email == request.email).first()
+    user = db.query(users.User).filter(users.User.email == request.email.lower()).first()
     if not user or not verify_password(request.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if user.deleted_at:
