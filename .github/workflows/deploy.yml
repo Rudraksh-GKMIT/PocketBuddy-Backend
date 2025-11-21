@@ -1,4 +1,4 @@
-name: Deploy Frontend
+name: Deploy Backend
 
 on:
   push:
@@ -25,4 +25,4 @@ jobs:
             source .venv/bin/activate
             git pull origin dev
             pip install -r requirements.txt
-            pm2 restart fastapi
+            pm2 restart fastapi-app
